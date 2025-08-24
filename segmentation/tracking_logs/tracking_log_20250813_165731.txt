@@ -1,0 +1,1 @@
+Time, X Coordinate, Y Coordinate
