@@ -118,7 +118,7 @@ def camera_tracking(panorama_path, output_path=None, frame_interval=5):
     tracker = OptimizedDroneTracker(panorama_path, frame_interval)
     
     # Открытие камеры (0 - индекс камеры по умолчанию)
-    cap = cv2.VideoCapture('flight_10.mp4')
+    cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
         print("[Ошибка] Не удалось открыть камеру")
@@ -148,7 +148,6 @@ def camera_tracking(panorama_path, output_path=None, frame_interval=5):
             
             if position is not None and tracker.frame_counter % tracker.frame_interval == 0:
                 vis = tracker.get_visualization(frame)
-                cv2.imshow('Drone Tracking (Camera)', vis)
                 
                 if writer is not None:
                     writer.write(vis)
@@ -163,7 +162,6 @@ def camera_tracking(panorama_path, output_path=None, frame_interval=5):
     cap.release()
     if writer is not None:
         writer.release()
-    cv2.destroyAllWindows()
     
     print("Обработка завершена")
 
