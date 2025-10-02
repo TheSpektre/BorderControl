@@ -3,6 +3,7 @@ import numpy as np
 import time
 import signal
 import sys
+import os
 
 # Глобальная переменная для обработки прерывания
 interrupt_flag = False
@@ -12,10 +13,19 @@ def signal_handler(sig, frame):
     print("\nПрерывание получено, завершаем работу и сохраняем панораму...")
     interrupt_flag = True
 
-def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80, output_path="/stitcher/panorama_output.jpg"):
+def create_panorama_from_camera(camera_id=0, frame_interval=10, roi_expansion=150, output_path="panorama_output.jpg"):
     """Оптимизированная версия для Jetson Orin Nano с поддержкой CUDA. Источник - камера."""
     # Устанавливаем обработчик сигналов для прерывания
     signal.signal(signal.SIGINT, signal_handler)
+    
+    # Получаем путь к директории скрипта
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if script_dir == '':
+        script_dir = os.getcwd()
+    
+    # Создаем полные пути для сохранения файлов
+    output_path = os.path.join(script_dir, output_path)
+    output_dir = os.path.dirname(output_path)
     
     # Проверяем доступность CUDA
     use_cuda = cv2.cuda.getCudaEnabledDeviceCount() > 0
@@ -29,11 +39,36 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
     # Настройка параметров для Jetson
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    print(f"Размер кадра: {width}x{height}")
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+    if fps == 0:
+        fps = 20  # Значение по умолчанию
+    
+    print(f"Размер кадра: {width}x{height}, FPS: {fps}")
+    print(f"Файлы будут сохранены в: {script_dir}")
+
+    # Создаем папку для сохранения, если её нет
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # Инициализация видео писателей
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    
+    # Видео с исходной камеры
+    camera_video_path = os.path.join(script_dir, f"camera_feed_{timestamp}.avi")
+    camera_writer = cv2.VideoWriter(
+        camera_video_path,
+        cv2.VideoWriter_fourcc(*'XVID'),
+        fps,
+        (width, height)
+    )
+    
+    # Видео процесса склейки (будет настроен позже)
+    stitching_writer = None
+    stitching_video_path = None
 
     # Оптимизированные параметры для Orin Nano
     sift = cv2.SIFT_create(
-        nfeatures=10000,  # Уменьшено для экономии ресурсов
+        nfeatures=17000,  # Уменьшено для экономии ресурсов
         nOctaveLayers=3,
         contrastThreshold=0.04,
         edgeThreshold=10
@@ -62,6 +97,9 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
             print("Ошибка чтения кадра с камеры")
             break
 
+        # Сохраняем исходный кадр в видео
+        camera_writer.write(frame)
+
         frame_count += 1
         if frame_count % frame_interval != 0:
             continue
@@ -79,6 +117,15 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
         if panorama is None:
             panorama = frame.copy()
             gray_panorama = gray_frame.copy()
+            
+            # Инициализируем видео писатель для процесса склейки после создания первого кадра панорамы
+            stitching_video_path = os.path.join(script_dir, f"stitching_process_{timestamp}.avi")
+            stitching_writer = cv2.VideoWriter(
+                stitching_video_path,
+                cv2.VideoWriter_fourcc(*'XVID'),
+                max(1, fps // frame_interval),  # Понижаем FPS т.к. записываем не каждый кадр, но не меньше 1
+                (panorama.shape[1], panorama.shape[0])
+            )
             continue
 
         # ROI обработка с преаллокацией
@@ -163,6 +210,25 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
         panorama = np.where(mask[..., None], warped_frame, panorama_adjusted)
         gray_panorama = cv2.cvtColor(panorama, cv2.COLOR_BGR2GRAY)
 
+        # Сохраняем текущее состояние панорамы в видео процесса склейки
+        if stitching_writer is not None:
+            # Создаем копию для отображения прогресса
+            display_panorama = panorama.copy()
+            
+            # Добавляем информацию о прогрессе
+            cv2.putText(display_panorama, f"Frames processed: {frame_count}", 
+                       (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            cv2.putText(display_panorama, f"Panorama size: {display_panorama.shape[1]}x{display_panorama.shape[0]}", 
+                       (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+            
+            # Записываем кадр в видео процесса склейки
+            stitching_writer.write(display_panorama)
+
+    # Завершаем запись видео
+    camera_writer.release()
+    if stitching_writer is not None:
+        stitching_writer.release()
+    
     cap.release()
     
     # Финализация и сохранение
@@ -177,7 +243,10 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
 
         cv2.imwrite(output_path, panorama)
         elapsed_time = time.time() - start_time
-        print(f"\nПанорама сохранена как {output_path}")
+        print(f"\nПанорама сохранена как: {output_path}")
+        print(f"Видео с камеры сохранено как: {camera_video_path}")
+        if stitching_video_path:
+            print(f"Видео процесса склейки сохранено как: {stitching_video_path}")
         print(f"Всего кадров обработано: {frame_count}")
         print(f"Общее время: {elapsed_time:.2f} сек")
         print(f"Скорость обработки: {frame_count/elapsed_time:.2f} FPS")
@@ -188,4 +257,4 @@ def create_panorama_from_camera(camera_id=0, frame_interval=15, roi_expansion=80
 
 if __name__ == "__main__":
     # Используем камеру по умолчанию (0)
-    create_panorama_from_camera(camera_id=0, frame_interval=30, roi_expansion=100)
+    create_panorama_from_camera(camera_id=0, frame_interval=10, roi_expansion=150)

@@ -24,7 +24,7 @@ print_warning() {
 
 
 # Создаем директорию для панорамы
-PANORAMA_DIR="/stitcher"
+PANORAMA_DIR="stitcher"
 PANORAMA_PATH="$PANORAMA_DIR/panorama_output.jpg"
 
 print_status "Проверяем директорию для панорамы: $PANORAMA_DIR"
