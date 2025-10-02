@@ -18,7 +18,7 @@ fi
 
 # Запускаем Python-скрипт
 echo "Запуск детектора дороги/поля..."
-python3.8 segmentation/scv_cam.py
+python segmentation/scv_cam.py
 
 # Проверяем код завершения
 if [ $? -ne 0 ]; then
