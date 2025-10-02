@@ -166,10 +166,10 @@ def camera_tracking(panorama_path, output_path=None, frame_interval=5):
     print("Обработка завершена")
 
 if __name__ == "__main__":
-    panorama = sys.argv[1]   
+    panorama = "panorama_output.jpg"   
     
     start_time = time.time()
-    camera_tracking(panorama, frame_interval=int(sys.argv[2]))
+    camera_tracking(panorama, frame_interval=10)
     elapsed_time = time.time() - start_time
     
     print(f"\nВремя выполнения: {elapsed_time:.2f} сек")

@@ -21,6 +21,26 @@ class RoadFieldDetector:
         # Статистика
         self.frame_count = 0
         self.start_time = time.time()
+        self.video_writer = None
+        self.video_initialized = False
+
+    def init_video_writer(self, frame_shape, fps=20):
+        """Инициализация видео writer"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        video_path = os.path.join(self.log_dir, f"segmentation_{timestamp}.mp4")
+        
+        # Определяем кодек и создаем VideoWriter
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        height, width = frame_shape[:2]
+        
+        self.video_writer = cv2.VideoWriter(
+            video_path, 
+            fourcc, 
+            fps,
+            (width, height)
+        )
+        self.video_initialized = True
+        print(f"Video recording started: {video_path}")
     
     def setup_new_log(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -53,7 +73,7 @@ class RoadFieldDetector:
         total_area = frame.shape[0] * frame.shape[1]
         
         # Определение класса
-        if road_area > 0.1 * total_area:  # Если дорога занимает >10% площади
+        if road_area > 0.2 * total_area:  # Если дорога занимает >10% площади
             class_id = 1
             confidence = road_area / (road_area + field_area + 1e-5)
         else:
@@ -85,6 +105,14 @@ class RoadFieldDetector:
         stats_text = f"Field: {field_area} | Road: {road_area}"
         cv2.putText(result, stats_text, (20, 130),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        
+         # Инициализация видео writer при первом кадре
+        if not self.video_initialized:
+            self.init_video_writer(result.shape, fps = cv2.VideoCapture(0).get(cv2.CAP_PROP_FPS))
+        
+        # Запись кадра в видео
+        if self.video_writer is not None:
+            self.video_writer.write(result)
         
         return result
 

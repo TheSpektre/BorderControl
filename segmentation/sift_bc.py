@@ -3,6 +3,7 @@ import numpy as np
 from collections import deque
 import time
 import csv
+import sys
 from datetime import datetime
 import os
 
@@ -113,60 +114,80 @@ class OptimizedDroneTracker:
         
         return vis
 
-def optimized_tracking(video_path, panorama_path, output_path=None, frame_interval=5):
+def camera_tracking(panorama_path, output_path=None, frame_interval=5):
     tracker = OptimizedDroneTracker(panorama_path, frame_interval)
-    cap = cv2.VideoCapture(video_path)
+    
+    # Открытие камеры (0 - индекс камеры по умолчанию)
+    cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
-        print(f"[Ошибка] Не удалось открыть видео: {video_path}")
+        print("[Ошибка] Не удалось открыть камеру")
         return
+    
+    # Установка разрешения камеры (по желанию)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     
     writer = None
     if output_path:
-        fps = cap.get(cv2.CAP_PROP_FPS) / frame_interval
+        fps = 30 / frame_interval
         size = (tracker.panorama.shape[1], tracker.panorama.shape[0])
         writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'XVID'), fps, size)
+        print(f"Запись видео в: {output_path}")
     
-    print("Начало обработки... (q - выход, p - пауза)")
+    print("Начало обработки с камеры... (q - выход, p - пауза)")
+    print("Для остановки нажмите Ctrl+C в консоли")
     paused = False
     
-    while cap.isOpened():
-        if not paused:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            
-            position = tracker.process_frame(frame)
-            
-            if position is not None and tracker.frame_counter % tracker.frame_interval == 0:
-                vis = tracker.get_visualization(frame)
-                cv2.imshow('Drone Tracking', vis)
+    try:
+        while True:
+            if not paused:
+                ret, frame = cap.read()
+                if not ret:
+                    print("[Ошибка] Не удалось получить кадр с камеры")
+                    break
                 
-                if writer is not None:
-                    writer.write(vis)
-        
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            break
-        elif key == ord('p'):
-            paused = not paused
-            print("Пауза" if paused else "Продолжение")
+                position = tracker.process_frame(frame)
+                
+                if position is not None and tracker.frame_counter % tracker.frame_interval == 0:
+                    vis = tracker.get_visualization(frame)
+                    
+                    if writer is not None:
+                        writer.write(vis)
+            
+            # Проверка нажатия клавиш без отображения окна
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord('q'):
+                break
+            elif key == ord('p'):
+                paused = not paused
+                print("Пауза" if paused else "Продолжение")
     
-    cap.release()
-    if writer is not None:
-        writer.release()
-    cv2.destroyAllWindows()
+    except KeyboardInterrupt:
+        print("\nОстановлено пользователем (Ctrl+C)")
+    
+    finally:
+        cap.release()
+        if writer is not None:
+            writer.release()
+        cv2.destroyAllWindows()
     
     print("Обработка завершена")
 
 if __name__ == "__main__":
-    panorama = "../panorama_output.jpg"
-    video = "../flight_10.mp4"
-    output = "tracking_output.avi"
+    panorama = "panorama_output.jpg"   
+    
+    # Автоматическое создание имени для видеофайла
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_video = f"segmentation/tracking_logs/camera_tracking_{timestamp}.avi"
+    
+    # Создаем директорию если не существует
+    os.makedirs("segmentation/tracking_logs", exist_ok=True)
     
     start_time = time.time()
-    optimized_tracking(video, panorama, output, frame_interval=30)
+    camera_tracking(panorama, output_video, frame_interval=10)
     elapsed_time = time.time() - start_time
     
     print(f"\nВремя выполнения: {elapsed_time:.2f} сек")
-    print(f"Логи сохранены в 'tracking_logs'")
+    print(f"Логи сохранены в 'segmentation/tracking_logs'")
+    print(f"Видео сохранено как: {output_video}")
