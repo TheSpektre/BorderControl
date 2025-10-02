@@ -92,7 +92,7 @@ def process_camera():
     detector = RoadFieldDetector()
     
     # Открытие камеры (0 - индекс камеры по умолчанию)
-    cap = cv2.VideoCapture('flight_20_new.mp4')
+    cap = cv2.VideoCapture(0)
     
     if not cap.isOpened():
         print("Ошибка открытия камеры")
@@ -123,7 +123,7 @@ def process_camera():
             break
     
     # Освобождение ресурсов
-    cap.release()ы
+    cap.release()
     print(f"\nОбработка завершена. Логи сохранены в: {detector.log_path}")
     print(f"Всего обработано кадров: {detector.frame_count}")
 
