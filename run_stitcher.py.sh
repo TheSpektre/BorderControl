@@ -4,7 +4,7 @@
 # Панорама сохраняется в /stitcher/panorama_output.jpg
 
 # Директория для сохранения панорамы
-PANORAMA_DIR="/stitcher"
+PANORAMA_DIR="~/aii_modules/BorderControl/stitcher"
 PANORAMA_PATH="$PANORAMA_DIR/panorama_output.jpg"
 
 # Проверяем существование директории, создаем если нет
@@ -23,7 +23,7 @@ echo "Панорама будет сохранена в: $PANORAMA_PATH"
 echo "Для завершения нажмите Ctrl+C"
 
 # Запускаем Python скрипт
-python3 camstitcher.py
+python camstitcher.py
 
 # Проверяем успешность выполнения
 if [ $? -eq 0 ]; then
