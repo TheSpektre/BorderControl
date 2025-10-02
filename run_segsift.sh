@@ -53,7 +53,7 @@ echo "Директория логов: $LOG_DIR"
 echo ""
 echo "Запуск трекера БПЛА..."
 
-python3.8 "$PYTHON_SCRIPT" "$PANORAMA_IMAGE" "$FRAME_INTERVAL"
+python "$PYTHON_SCRIPT" "$PANORAMA_IMAGE" "$FRAME_INTERVAL"
 
 # Проверяем результат выполнения
 check_error $? "$PYTHON_SCRIPT"
