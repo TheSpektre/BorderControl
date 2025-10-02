@@ -107,8 +107,6 @@ def process_camera():
     print(f"Размер: {width}x{height}, FPS: {fps:.1f}")
     print(f"Логи будут сохранены в: {detector.log_path}")
     
-    # Создание окна для вывода
-    cv2.namedWindow("Road/Field Segmentation", cv2.WINDOW_NORMAL)
     
     while True:
         ret, frame = cap.read()
@@ -120,15 +118,12 @@ def process_camera():
         result_frame = detector.process_frame(frame)
         
         # Отображение
-        cv2.imshow("Road/Field Segmentation", result_frame)
-        
         # Выход по нажатию 'q'
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     
     # Освобождение ресурсов
-    cap.release()
-    cv2.destroyAllWindows()
+    cap.release()ы
     print(f"\nОбработка завершена. Логи сохранены в: {detector.log_path}")
     print(f"Всего обработано кадров: {detector.frame_count}")
 
