@@ -73,5 +73,5 @@ print_warning "Для завершения и сохранения панора�
 echo ""
 
 # Запускаем Python скрипт
-python ~/stitcher/camstitcher.py
+python /stitcher/camstitcher.py
 
