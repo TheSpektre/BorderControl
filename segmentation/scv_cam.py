@@ -36,7 +36,7 @@ class RoadFieldDetector:
         self.video_writer = cv2.VideoWriter(
             video_path, 
             fourcc, 
-            fps,
+            10,
             (width, height)
         )
         self.video_initialized = True
