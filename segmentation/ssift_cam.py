@@ -132,7 +132,7 @@ def camera_tracking(panorama_path, output_path=None, frame_interval=5):
     if output_path:
         fps = 30 / frame_interval  # Предполагаем 30 FPS с камеры
         size = (tracker.panorama.shape[1], tracker.panorama.shape[0])
-        writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'XVID'), fps, size)
+        writer = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'XVID'), 10, size)
     
     print("Начало обработки с камеры... (q - выход, p - пауза)")
     paused = False
